@@ -43,6 +43,22 @@
         overflow-y: scroll;
         margin-left: 40px;
         margin-right: 20px;
+        margin-bottom: 10px;
+      }
+      .datetime {
+        font-size: 0.8em;
+        color: gray;
+      }
+      .username {
+        font-size: 0.9em;
+        color: #3f51b5;
+      }
+      .msgline {
+        display: flex;
+      }
+      .clear-history {
+        margin-left: 40px;
+        margin-right: 20px;
         margin-bottom: 20px;
       }
     </style>
@@ -51,20 +67,111 @@
         "/dns6/ipfs.thedisco.zone/tcp/4430/wss/p2p/12D3KooWChhhfGdB9GJy1GbhghAAKCUR99oCymMEVS4eUcEy67nt",
         "/dns4/ipfs.thedisco.zone/tcp/4430/wss/p2p/12D3KooWChhhfGdB9GJy1GbhghAAKCUR99oCymMEVS4eUcEy67nt",
       ];
-      const prefix = "discochat-rocket";
+      const prefix = "discort-chat-rocket";
       var lastAlive = 0; // last keep-alive we saw from a relay
       var lastPeer = 0; // last keep-alive we saw from another peer
       var lastBootstrap = 0; // used for tracking when we last attempted to bootstrap (likely to reconnect to a relay)
       var ipfs;
       var peerCount = 0; // this is kind of a janky way to track peer count. really it'd be better to store the peers
+
+      var msgs = localStorage.getItem("msgs");
+      if (!msgs) {
+        localStorage.setItem("msgs", JSON.stringify([]));
+      }
+
       // in a map, along with their last "peer-alive", to track peer count in a stable way.
+
+      // if (!window.indexedDB) {
+      //   window.alert("Ваш браузер не поддерживает версию IndexedDB");
+      // }
+      // var db;
+      // var request = window.indexedDB.open("msgs", 3);
+
+      // const msgs = [
+      //   {
+      //     timestamp: "2021-11-27 22:00:00.000000",
+      //     name: "Vlad",
+      //     msg: "Первое сообщение",
+      //   },
+      //   {
+      //     timestamp: "2021-11-27 22:01:00.000000",
+      //     name: "M1sh@",
+      //     msg: "Второе сообщение",
+      //   },
+      //   {
+      //     timestamp: "2021-11-27 22:02:00.000000",
+      //     name: "Имя",
+      //     msg: "Третье сообщение",
+      //   },
+      // ];
+
+      // // This event is only implemented in recent browsers
+      // request.onupgradeneeded = function (event) {
+      //   var db = event.target.result;
+      //   var objectStore = db.createObjectStore("msgs", {
+      //     keyPath: "timestamp",
+      //   });
+      //   for (var i in msgs) {
+      //     objectStore.add(msgs[i]);
+      //   }
+      // };
+
+      // request.onupgradeneeded = function (event) {
+      //   var db = event.target.result;
+      //   db
+      //     .transaction(["customers"], "readwrite")
+      //     .objectStore("msgs")
+      //     .get("2021-11-27 22:02:00.000000").onsuccess = function (event) {
+      //     alert("Name for SSN 444-44-4444 is " + event.target.result.name);
+      //   };
+      // };
+
+      // // var objectStore = db.createObjectStore("msgs", { keyPath: "timestamp" });
+      // // {% comment %} objectStore.createIndex(); {% endcomment %}
+
+      // // objectStore.get("2021-11-27 22:02:00.000000").onsuccess = function (
+      // //   event
+      // // ) {
+      // //   alert("Name for SSN 444-44-4444 is " + event.target.result.name);
+      // // };
 
       // out is used for processing recieved messages and outputting them both to console and the message box.
       function out(msg) {
         msg = new TextDecoder().decode(msg.data);
-        console.log(msg);
+
+        msgs = JSON.parse(localStorage.getItem("msgs"));
+        msgs.push(msg);
+        localStorage.setItem("msgs", JSON.stringify(msgs));
+
+        print_line(msg);
+      }
+
+      function print_line(msg) {
         c = document.getElementById("chat");
-        c.innerHTML += "<br>" + msg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        m = msg.split(" ");
+
+        var timeOptions = {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          weekday: "short",
+          hour: "2-digit",
+          hour12: false,
+          minute: "2-digit",
+          second: "2-digit",
+        };
+
+        var ts = new Date(parseInt(m[0]));
+        ts = ts.toLocaleTimeString(undefined, this.timeOptions);
+        c.innerHTML =
+          '<div class="msgline"> <div class="col-3"> <i class="username">' +
+          m[1] +
+          '</i></div><div class="col-7">' +
+          m.slice(2).join(" ") +
+          '</div><div class="col-2"> <i class="datetime col-3">' +
+          ts +
+          "</i></div></div>" +
+          c.innerHTML;
         c.scrollTop = c.scrollHeight;
       }
 
@@ -75,12 +182,15 @@
 
       // used for triggering a sendmsg from user input
       async function sendMsg() {
-        displayn = document.getElementById("displayInput").value;
+        displayn = document
+          .getElementById("displayInput")
+          .value.replace(" ", "_");
         msg = document.getElementById("chatInput").value;
         if (displayn == "" || msg == "") {
           return true;
         }
-        sendmsg("[" + displayn + "] " + msg, "global");
+        now = new Date().getTime();
+        sendmsg(`${now} @${displayn} ${msg}`, "global");
         document.getElementById("chatInput").value = "";
       }
 
@@ -119,13 +229,13 @@
         addr = new TextDecoder().decode(addr.data);
 
         if (addr == "peer-alive") {
-          console.log(addr);
+          // console.log(addr);
           pcDisplay = document.getElementById("peerCount");
           peerCount += 1;
-          pcDisplay.innerHTML = peerCount.toString();
+          // pcDisplay.innerHTML = peerCount.toString();
           setTimeout(function () {
             peerCount -= 1;
-            pcDisplay.innerHTML = peerCount.toString();
+            // pcDisplay.innerHTML = peerCount.toString();
           }, 15000);
 
           lastPeer = new Date().getTime();
@@ -136,12 +246,12 @@
         lastAlive = new Date().getTime();
 
         if (addr == "keep-alive") {
-          console.log(addr);
+          // console.log(addr);
           return;
         }
         peer = addr.split("/")[9];
-        console.log("Peer: " + peer);
-        console.log("Me: " + me);
+        // console.log("Peer: " + peer);
+        // console.log("Me: " + me);
         if (peer == me) {
           return;
         }
@@ -155,14 +265,14 @@
           }
         }
         // log the address to console as we're about to attempt a connection
-        console.log(addr);
+        // console.log(addr);
 
         // connection almost always fails the first time, but almost always succeeds the second time, so we do this:
         try {
           await ipfs.swarm.connect(addr);
         } catch (err) {
-          console.log(err);
-          await ipfs.swarm.connect(addr);
+          // console.log(err);
+          // await ipfs.swarm.connect(addr);
         }
       }
 
@@ -179,7 +289,7 @@
             try {
               await ipfs.swarm.disconnect(bootstraps[i]);
             } catch (e) {
-              console.log(e);
+              // console.log(e);
             }
           } else {
             await ipfs.bootstrap.add(bootstraps[i]);
@@ -249,6 +359,22 @@
           },
           false
         );
+        document.getElementById("clearButton").addEventListener(
+          "click",
+          function (e) {
+            c = document.getElementById("chat");
+            c.innerHTML = "";
+            localStorage.setItem("msgs", JSON.stringify([]));
+          },
+          false
+        );
+
+        if (msgs) {
+          msgs = JSON.parse(msgs);
+          for (var m in msgs) {
+            print_line(msgs[m]);
+          }
+        }
       }
     </script>
   </head>
@@ -264,14 +390,15 @@
       "
     >
       <div style="margin-top: -2em">
-        <!-- <h1>ipfs chat (<span style="color: lime" id="peerCount">0</span>)</h1> -->
         <p>
-          Это p2p-чат, реализованый командой <b>«РАКЕТА»</b> на основе
-          протокола IPFS
+          Это p2p-чат, реализованый командой <b>«РАКЕТА»</b> на основе протокола
+          IPFS
         </p>
         <p><i>Хакатон «TulaHack» 2021 год</i></p>
       </div>
     </div>
+
+    <!-- <h1>ipfs chat (<span style="color: lime" id="peerCount">0</span>)</h1> -->
 
     <div class="row send-div">
       <div class="input-group input-field">
@@ -318,5 +445,12 @@
         <p id="chat"></p>
       </div>
     </div>
+    <button
+      class="btn btn-outline-secondary clear-history"
+      type="button"
+      id="clearButton"
+    >
+      Удалить историю
+    </button>
   </body>
 </html>
