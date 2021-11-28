@@ -41,7 +41,7 @@
       .chat-div {
         height: 100%;
         overflow-y: scroll;
-        margin-left: 40px;
+        margin-left: 20px;
         margin-right: 20px;
         margin-bottom: 10px;
       }
@@ -53,11 +53,19 @@
         font-size: 0.9em;
         color: #3f51b5;
       }
-      .msgline {
+      .msg-header {
         display: flex;
+        justify-content: space-between;
+      }
+      .msg-line {
+        background-color: ghostwhite;
+        margin-bottom: 10px;
+        padding: 10px;
+        border: #bbdeff 1px solid;
+        border-radius: 5px;
       }
       .clear-history {
-        margin-left: 40px;
+        margin-left: 20px;
         margin-right: 20px;
         margin-bottom: 20px;
       }
@@ -164,14 +172,15 @@
         var ts = new Date(parseInt(m[0]));
         ts = ts.toLocaleTimeString(undefined, this.timeOptions);
         c.innerHTML =
-          '<div class="msgline"> <div class="col-3"> <i class="username">' +
-          m[1] +
-          '</i></div><div class="col-7">' +
-          m.slice(2).join(" ") +
-          '</div><div class="col-2"> <i class="datetime col-3">' +
-          ts +
-          "</i></div></div>" +
-          c.innerHTML;
+          `<div class="msg-line"> 
+            <div class="msg-header">
+              <i class="username"> ${m[1]} </i>
+              <i class="datetime"> ${ts} </i>
+            </div>
+            <div>
+              ${m.slice(2).join(" ")}
+            </div>
+          </div>` + c.innerHTML;
         c.scrollTop = c.scrollHeight;
       }
 
